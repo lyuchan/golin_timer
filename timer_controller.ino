@@ -1,8 +1,8 @@
-#include <RotaryEncoder.h>
-#include <SoftwareSerial.h>    // 引用程式庫
-SoftwareSerial display(6, 7);  // 接收腳, 傳送腳
+#include <RotaryEncoder.h>     //旋轉編碼器
+#include <SoftwareSerial.h>    // 軟體串口封包
+SoftwareSerial display(6, 7);  //UART螢幕定義
 RotaryEncoder encoder(12, 13, RotaryEncoder::LatchMode::TWO03);
-#define sw 11
+#define sw 11 //編碼器按鈕
 #define btnext 5
 #define btback 4
 #define btstart 3
@@ -14,8 +14,6 @@ int oldpos = -1, pos = 0;
 bool mute = false;
 void setup() {
   display.begin(9600);
-  //setup pinmode
-
   pinMode(sw, INPUT_PULLUP);
   pinMode(btnext, INPUT_PULLUP);
   pinMode(btback, INPUT_PULLUP);
@@ -49,7 +47,6 @@ void loop() {
       }
       break;
     case 2:  //timer
-
       btmax = 6;
       if (oldpos2 != pos2) {
         oldpos2 = pos2;
@@ -92,7 +89,7 @@ void loop() {
     case 3:  //set
       if (setflag) {
         switch (pos2) {
-          case 0:
+          case 0://dimmer
 
             ROTARYMAX = 255;
             if (oldpos != pos) {
@@ -100,7 +97,7 @@ void loop() {
               setnum(0, pos);
             }
             break;
-          case 1:
+          case 1://mute
             ROTARYMAX = 1;
             if (oldpos != pos) {
               oldpos = pos;
@@ -140,17 +137,17 @@ void loop() {
         if (oldpos2 != pos2) {
           oldpos2 = pos2;
           switch (pos2) {
-            case 0:
+            case 0://dimmer
               setqpicc(0, 6);
               setqpicc(1, 4);
               setqpicc(3, 4);
               break;
-            case 1:
+            case 1://mute
               setqpicc(0, 4);
               setqpicc(1, 6);
               setqpicc(3, 4);
               break;
-            case 2:
+            case 2://next page
               setqpicc(0, 4);
               setqpicc(1, 4);
               setqpicc(3, 6);
@@ -158,7 +155,7 @@ void loop() {
           }
         }
         switch (pos2) {
-          case 0:
+          case 0://dimmer
             if (digitalRead(sw) == LOW) {
               delay(20);
               if (digitalRead(sw) == LOW) {
@@ -173,7 +170,7 @@ void loop() {
               }
             }
             break;
-          case 1: 
+          case 1: //mute
             if (digitalRead(sw) == LOW) {
               delay(20);
               if (digitalRead(sw) == LOW) {
@@ -190,7 +187,7 @@ void loop() {
               }
             }
             break;
-          case 2:
+          case 2://back
             if (digitalRead(sw) == LOW) {
               delay(20);
               if (digitalRead(sw) == LOW) {
@@ -208,19 +205,23 @@ void loop() {
   }
 }
 
-void end_screen() {
+void end_screen() {//結束資料
   display.print("\xff\xff\xff");
 }
-void topage(int p) {
+void topage(int p) {//變更頁面
   display.print("page " + String(p));
   end_screen();
 }
-void setqpicc(int q, int pic) {
+void setqpicc(int q, int pic) {//切圖 編號，圖片
   display.print("q" + String(q) + ".picc=" + String(pic));
   end_screen();
 }
-void setnum(int n, int val) {
+void setnum(int n, int val) {//數值
   display.print("n" + String(n) + ".val=" + String(val));
+  end_screen();
+}
+void settxt(int txt,int hh,int mm){
+  display.print("txt" + String(txt) + ".txt=" + String(hh)+":"+ String(mm);
   end_screen();
 }
 void settime(int hh, int mm) {
