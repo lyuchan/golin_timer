@@ -61,20 +61,20 @@ void loop() {
         }
       }
       slc = pos2;
-      switch (slc) {
-        case 0:
+      switch (slc) {//
+        case 0://第一位數值
           break;
-        case 1:
+        case 1://第二位數值
           break;
-        case 2:
+        case 2://第三位數值
           break;
-        case 3:
+        case 3://第四位數值
           break;
-        case 4:
+        case 4://start
           break;
-        case 5:
+        case 5://stop
           break;
-        case 6:
+        case 6://next menu
           if (digitalRead(sw) == LOW) {
             delay(20);
             if (digitalRead(sw) == LOW) {
@@ -173,7 +173,7 @@ void loop() {
               }
             }
             break;
-          case 1:
+          case 1: 
             if (digitalRead(sw) == LOW) {
               delay(20);
               if (digitalRead(sw) == LOW) {
