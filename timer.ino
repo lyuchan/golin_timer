@@ -1,8 +1,3 @@
-/*
-這個專案是因為我所工作的地方購買了一個時鐘，原先的使用方式非常不優雅，
-因此我逆向了這個商品，使用arduino進行控制，因為我需要使用xlr來做中間的傳輸線，
-因此我決定使用dmx這個協議，遠且可以傳送滿多資料的。
-*/
 //通訊使用
 #include <DMXSerial.h>
 //顯示器使用spi通訊
@@ -11,7 +6,6 @@ const int dataPin = 10;   //移位寄存器資料
 const int clockPin = 11;  //移位寄存器時鐘
 const int latchPin = 12;  //栓鎖器
 const int ohPin = 9;      //pwm亮度控制
-
 const int buzzer = 8;  //蜂鳴器
 //初始化
 void setup() {
