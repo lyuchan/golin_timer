@@ -1,8 +1,8 @@
 #include <Wire.h>  //時鐘模組
 #include <ThreeWire.h>
 #include <RtcDS1302.h>
-//#include <DMXSerial.h>  //dmx通訊
-#include <EEPROM.h>  //eeprom
+#include <DMXSerial.h>  //dmx通訊
+#include <EEPROM.h>     //eeprom
 /*
 dmx通道協議
 1.左顯示數值，超過100不顯示
@@ -19,8 +19,8 @@ RotaryEncoder encoder(12, 13, RotaryEncoder::LatchMode::TWO03);
 #define btnext 5
 #define btback 4
 #define btstart 3
-#define btstop 2
-#define dmxslc 14
+#define btstop 14
+#define dmxslc 2
 #define ROTARYMIN 0
 #define beedelay 1000
 ThreeWire myWire(9, 10, 8);  // IO, SCLK, CE
@@ -32,10 +32,9 @@ bool mute = false;
 uint8_t dimmer = 128;
 int timermod = 1;
 void setup() {
-  //DMXSerial.init(DMXController);
-
+  DMXSerial.init(DMXController);
   display.begin(9600);
-  Serial.begin(9600);
+  // Serial.begin(9600);
   Rtc.Begin();
   dimmer = read_dimmer();
   mute = read_mute();
@@ -62,12 +61,12 @@ unsigned long time1, time2, time3, time4, beetime;
 void bee_loop() {
   if (beetime >= time1) {
     if (mute) {
-      //DMXSerial.write(1, 0);
+      DMXSerial.write(1, 0);
     } else {
-      //DMXSerial.write(1, 255);
+      DMXSerial.write(1, 255);
     }
   } else {
-    //DMXSerial.write(5, 0);
+    DMXSerial.write(5, 0);
   }
 }
 void loop() {
@@ -79,8 +78,8 @@ void loop() {
   bee_loop();
   switch (page) {
     case 1:  //clock
-      //DMXSerial.write(3, 255);
-      Serial.println(digitalRead(11));
+      DMXSerial.write(3, 255);
+      //Serial.println(digitalRead(11));
       //Serial.println("clock");
       if ((time1 - time2) > 100) {
         time2 = time1;
@@ -108,7 +107,7 @@ void loop() {
       }
       break;
     case 2:  //timer
-      //DMXSerial.write(3, 255);
+      DMXSerial.write(3, 255);
       btmax = 4;
       // //Serial.println(btnum);
       if (digitalRead(btstart) == LOW) {
@@ -371,10 +370,10 @@ void loop() {
       switch (btnum) {
         case 0:
 
-          //DMXSerial.write(1, 88);
-          //DMXSerial.write(2, 88);
-          //DMXSerial.write(3, 255);
-          //DMXSerial.write(4, dimmer);
+          DMXSerial.write(1, 88);
+          DMXSerial.write(2, 88);
+          DMXSerial.write(3, 255);
+          DMXSerial.write(4, dimmer);
           ROTARYMAX = 255;
           if (oldpos != pos) {
             oldpos = pos;
@@ -387,11 +386,11 @@ void loop() {
               while (digitalRead(sw) == LOW) { delay(1); }
               topage(4);  //save
               save_dimmer_to_eeprom(dimmer);
-              delay(1000);
+              delay(500);
               topage(3);
               oldbtnum = -1;
               setnum(0, dimmer);
-               if (mute) {
+              if (mute) {
                 setqpicc(2, 6);
               } else {
                 setqpicc(2, 4);
@@ -400,9 +399,9 @@ void loop() {
           }
           break;
         case 1:
-          //DMXSerial.write(1, 200);
-          //DMXSerial.write(2, 200);
-          //DMXSerial.write(3, 0);
+          DMXSerial.write(1, 200);
+          DMXSerial.write(2, 200);
+          DMXSerial.write(3, 0);
           ROTARYMAX = 1;
           if (oldpos != pos) {
             oldpos = pos;
@@ -419,10 +418,10 @@ void loop() {
               while (digitalRead(sw) == LOW) { delay(1); }
               topage(4);  //save
               save_mute_to_eeprom(mute);
-              delay(1000);
+              delay(500);
               topage(3);
               oldbtnum = -1;
-               setnum(0, dimmer);
+              setnum(0, dimmer);
               if (mute) {
                 setqpicc(2, 6);
               } else {
@@ -432,9 +431,9 @@ void loop() {
           }
           break;
         case 2:
-          //DMXSerial.write(1, 200);
-          //DMXSerial.write(2, 200);
-          //DMXSerial.write(3, 0);
+          DMXSerial.write(1, 200);
+          DMXSerial.write(2, 200);
+          DMXSerial.write(3, 0);
           if (digitalRead(sw) == LOW) {
             delay(20);
             if (digitalRead(sw) == LOW) {
@@ -483,8 +482,8 @@ void settime(int hh, int mm) {
   } else {
     m = String(mm);
   }
-  //DMXSerial.write(1, hh);
-  //DMXSerial.write(2, mm);
+  DMXSerial.write(1, hh);
+  DMXSerial.write(2, mm);
   display.print("t0.txt=\"" + h + ":" + m + "\"");
   end_screen();
 }
