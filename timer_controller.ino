@@ -2,6 +2,7 @@
 #include <ThreeWire.h>
 #include <RtcDS1302.h>
 #include <DMXSerial.h>  //dmx通訊
+#include <EEPROM.h>     //eeprom
 /*
 dmx通道協議
 1.左顯示數值，超過100不顯示
@@ -28,14 +29,16 @@ bool setflag = false;
 int ROTARYMAX = 100;
 int oldpos = -1, pos = 0;
 bool mute = false;
-int dimmer = 128;
+uint8_t dimmer = 128;
 int timermod = 1;
 void setup() {
   DMXSerial.init(DMXController);
 
   display.begin(9600);
-  Serial.begin(9600);
+  //Serial.begin(9600);
   Rtc.Begin();
+  dimmer = read_dimmer();
+  mute = read_mute();
   pinMode(sw, INPUT_PULLUP);
   pinMode(btnext, INPUT_PULLUP);
   pinMode(btback, INPUT_PULLUP);
@@ -80,9 +83,9 @@ void loop() {
       if ((time1 - time2) > 100) {
         time2 = time1;
         settime(now.Hour(), now.Minute());
-        Serial.print(now.Hour());
-        Serial.print(":");
-        Serial.println(now.Minute());
+        ////Serial.print(now.Hour());
+        ////Serial.print(":");
+        //Serial.println(now.Minute());
       }
       if (digitalRead(sw) == LOW) {
         delay(20);
@@ -102,7 +105,7 @@ void loop() {
     case 2:  //timer
       DMXSerial.write(3, 255);
       btmax = 4;
-      // Serial.println(btnum);
+      // //Serial.println(btnum);
       if (digitalRead(btstart) == LOW) {
         delay(20);
         if (digitalRead(btstart) == LOW) {
@@ -212,8 +215,8 @@ void loop() {
               oldslc = slc;
               pos = timermm / 10;
               encoder.setPosition(pos);
-              Serial.print(slc);
-              Serial.print(slc);
+              //Serial.print(slc);
+              //Serial.print(slc);
             }
             if (oldpos != pos) {
               oldpos = pos;
@@ -237,8 +240,8 @@ void loop() {
               pos = timermm % 10;
               encoder.setPosition(pos);
               oldpos = -1;
-              Serial.print(slc);
-              Serial.print(slc);
+              //Serial.print(slc);
+              //Serial.print(slc);
             }
             if (oldpos != pos) {
               oldpos = pos;
@@ -260,8 +263,8 @@ void loop() {
               pos = timerss / 10;
               encoder.setPosition(pos);
               oldpos = -1;
-              Serial.print(slc);
-              Serial.print(slc);
+              //Serial.print(slc);
+              //Serial.print(slc);
             }
             if (oldpos != pos) {
               oldpos = pos;
@@ -283,8 +286,8 @@ void loop() {
               pos = timerss % 10;
               encoder.setPosition(pos);
               oldpos = -1;
-              Serial.print(slc);
-              Serial.print(slc);
+              //Serial.print(slc);
+              //Serial.print(slc);
             }
             if (oldpos != pos) {
               oldpos = pos;
@@ -373,7 +376,8 @@ void loop() {
             if (digitalRead(sw) == LOW) {
               while (digitalRead(sw) == LOW) { delay(1); }
               topage(4);  //save
-              delay(2000);
+              save_dimmer_to_eeprom(dimmer);
+              delay(1000);
               topage(3);
               oldbtnum = -1;
               setnum(0, dimmer);
@@ -399,7 +403,8 @@ void loop() {
             if (digitalRead(sw) == LOW) {
               while (digitalRead(sw) == LOW) { delay(1); }
               topage(4);  //save
-              delay(2000);
+              save_mute_to_eeprom(mute);
+              delay(500);
               topage(3);
               oldbtnum = -1;
               if (mute) {
@@ -486,8 +491,8 @@ void bt_loop() {
     if (btnextflag == false) {
       delay(20);
       if (digitalRead(btnext) == LOW) {
-        Serial.println("btnext");
-        Serial.println(btnum);
+        //Serial.println("btnext");
+        //Serial.println(btnum);
         btnextflag = true;
         btnum++;
         if (btnum > btmax) {
@@ -502,8 +507,8 @@ void bt_loop() {
     if (btbackflag == false) {
       delay(20);
       if (digitalRead(btback) == LOW) {
-        Serial.println("btback");
-        Serial.println(btnum);
+        //Serial.println("btback");
+        //Serial.println(btnum);
         btbackflag = true;
         btnum--;
         if (btnum == -1) {
@@ -513,5 +518,29 @@ void bt_loop() {
     }
   } else {
     btbackflag = false;
+  }
+}
+
+
+
+
+void save_dimmer_to_eeprom(int dim) {
+  EEPROM.write(10, dim);
+}
+void save_mute_to_eeprom(bool muteval) {
+  if (muteval) {
+    EEPROM.write(20, 255);
+  } else {
+    EEPROM.write(20, 0);
+  }
+}
+int read_dimmer() {
+  return EEPROM.read(10);
+}
+bool read_mute() {
+  if (EEPROM.read(20) == 255) {
+    return true;
+  } else {
+    return false;
   }
 }
