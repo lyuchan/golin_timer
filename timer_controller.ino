@@ -38,6 +38,10 @@ void setup() {
   Rtc.Begin();
   dimmer = read_dimmer();
   mute = read_mute();
+  DMXSerial.write(1, 255);
+  DMXSerial.write(2, 255);
+  DMXSerial.write(3, 0);
+  DMXSerial.write(4, dimmer);
   pinMode(sw, INPUT_PULLUP);
   pinMode(btnext, INPUT_PULLUP);
   pinMode(btback, INPUT_PULLUP);
@@ -61,9 +65,9 @@ unsigned long time1, time2, time3, time4, beetime;
 void bee_loop() {
   if (beetime >= time1) {
     if (mute) {
-      DMXSerial.write(1, 0);
+      DMXSerial.write(5, 0);
     } else {
-      DMXSerial.write(1, 255);
+      DMXSerial.write(5, 255);
     }
   } else {
     DMXSerial.write(5, 0);
@@ -114,6 +118,7 @@ void loop() {
         delay(20);
         if (digitalRead(btstart) == LOW) {
           while (digitalRead(btstart) == LOW) { delay(1); }
+          time4 = time3;
           if (!timergo) {
 
             timergo = true;
@@ -157,7 +162,7 @@ void loop() {
               timermm--;
               timerss = 59;
             }
-            if (timermm <= -1) {
+            if (timermm <= 0 && timerss <= 0) {
               timermm = 0;
               timerss = 0;
               timergo = false;
