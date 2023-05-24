@@ -1,7 +1,15 @@
 #include <Wire.h>  //時鐘模組
 #include <ThreeWire.h>
 #include <RtcDS1302.h>
-
+#include <DMXSerial.h>  //dmx通訊
+/*
+dmx通道協議
+1.左顯示數值，超過100不顯示
+2.右顯示數值，超過100不顯示
+3.中間兩點(超過100啟用)
+4.dimmer
+5.蜂鳴器(超過100啟用)
+*/
 #include <RotaryEncoder.h>     //旋轉編碼器
 #include <SoftwareSerial.h>    // 軟體串口封包
 SoftwareSerial display(6, 7);  //UART螢幕定義
@@ -10,15 +18,21 @@ RotaryEncoder encoder(12, 13, RotaryEncoder::LatchMode::TWO03);
 #define btnext 5
 #define btback 4
 #define btstart 3
-#define btstop 2
+#define btstop 14
+#define dmxslc 2
 #define ROTARYMIN 0
+#define beedelay 1000
 ThreeWire myWire(9, 10, 8);  // IO, SCLK, CE
 RtcDS1302<ThreeWire> Rtc(myWire);
 bool setflag = false;
 int ROTARYMAX = 100;
 int oldpos = -1, pos = 0;
 bool mute = false;
+int dimmer = 128;
+int timermod = 1;
 void setup() {
+  DMXSerial.init(DMXController);
+
   display.begin(9600);
   Serial.begin(9600);
   Rtc.Begin();
@@ -27,6 +41,8 @@ void setup() {
   pinMode(btback, INPUT_PULLUP);
   pinMode(btstart, INPUT_PULLUP);
   pinMode(btstop, INPUT_PULLUP);
+  pinMode(dmxslc, OUTPUT);
+  digitalWrite(dmxslc, HIGH);  //console mod
   topage(1);
 }
 int page = 1;
@@ -34,18 +50,33 @@ int slc = 0, oldslc = -1;
 int btnum = 0;
 int oldbtnum = -1;
 int btmax = 0;
-int timermm = 0, timerss = 0;
+int timermm = 0, timerss = 0, oldtimermm = 0, oldtimerss = 0;
 bool btnextflag = false;
 bool btbackflag = false;
-unsigned long time1, time2;
+bool timergo = false, oldtimergo = false, timeup = true;
+unsigned long time1, time2, time3, time4, beetime;
+
+void bee_loop() {
+  if (beetime >= time1) {
+    if (mute) {
+      DMXSerial.write(1, 0);
+    } else {
+      DMXSerial.write(1, 255);
+    }
+  } else {
+    DMXSerial.write(5, 0);
+  }
+}
 void loop() {
   RtcDateTime now = Rtc.GetDateTime();
   time1 = millis();
+
   encoder.tick();
   pos = encoder_loop();
   bt_loop();
   switch (page) {
     case 1:  //clock
+      DMXSerial.write(3, 255);
       if ((time1 - time2) > 100) {
         time2 = time1;
         settime(now.Hour(), now.Minute());
@@ -64,244 +95,217 @@ void loop() {
           btnum = 0;
           oldbtnum = -1;
           oldslc = -1;
+          setqpicc(6, 3);
         }
       }
       break;
     case 2:  //timer
-      btmax = 6;
+      DMXSerial.write(3, 255);
+      btmax = 4;
       // Serial.println(btnum);
-      if (oldbtnum != btnum) {
-        oldbtnum = btnum;
-        setqpicc(btnum, 3);
-        for (int i = 0; i < 7; i++) {
-          if (i != btnum) {
-            setqpicc(i, 2);
-          }
-        }
-        settime(timermm, timerss);
-      }
-      slc = btnum;
+      if (digitalRead(btstart) == LOW) {
+        delay(20);
+        if (digitalRead(btstart) == LOW) {
+          while (digitalRead(btstart) == LOW) { delay(1); }
+          if (!timergo) {
 
-      switch (slc) {  //
-        case 0:       //第一位數值
-          ROTARYMAX = 9;
-          if (oldslc != slc) {
-            oldslc = slc;
-            pos = timermm / 10;
-            encoder.setPosition(pos);
-            Serial.print(slc);
-            Serial.print(slc);
-          }
-          if (oldpos != pos) {
-            oldpos = pos;
-            timermm = (pos * 10) + timermm % 10;
-            settime(timermm, timerss);
-          }
-          if (digitalRead(sw) == LOW) {
-            delay(20);
-            if (digitalRead(sw) == LOW) {
-              btnum = 1;
-              pos = timermm % 10;
-              while (digitalRead(sw) == LOW) { delay(1); }
-            }
-          }
-
-          break;
-        case 1:  //第二位數值
-          ROTARYMAX = 9;
-          if (oldslc != slc) {
-            oldslc = slc;
-            pos = timermm % 10;
-            encoder.setPosition(pos);
-            oldpos = -1;
-            Serial.print(slc);
-            Serial.print(slc);
-          }
-          if (oldpos != pos) {
-            oldpos = pos;
-            timermm = (timermm / 10) * 10 + pos;
-            settime(timermm, timerss);
-          }
-          if (digitalRead(sw) == LOW) {
-            delay(20);
-            if (digitalRead(sw) == LOW) {
-              btnum = 2;
-              while (digitalRead(sw) == LOW) { delay(1); }
-            }
-          }
-          break;
-        case 2:  //第三位數值
-          ROTARYMAX = 5;
-          if (oldslc != slc) {
-            oldslc = slc;
-            pos = timerss / 10;
-            encoder.setPosition(pos);
-            oldpos = -1;
-            Serial.print(slc);
-            Serial.print(slc);
-          }
-          if (oldpos != pos) {
-            oldpos = pos;
-            timerss = (pos * 10) + timerss % 10;
-            settime(timermm, timerss);
-          }
-          if (digitalRead(sw) == LOW) {
-            delay(20);
-            if (digitalRead(sw) == LOW) {
-              btnum = 3;
-              while (digitalRead(sw) == LOW) { delay(1); }
-            }
-          }
-          break;
-        case 3:  //第四位數值
-          ROTARYMAX = 9;
-          if (oldslc != slc) {
-            oldslc = slc;
-            pos = timerss % 10;
-            encoder.setPosition(pos);
-            oldpos = -1;
-            Serial.print(slc);
-            Serial.print(slc);
-          }
-          if (oldpos != pos) {
-            oldpos = pos;
-            timerss = (timerss / 10) * 10 + pos;
-            settime(timermm, timerss);
-          }
-          if (digitalRead(sw) == LOW) {
-            delay(20);
-            if (digitalRead(sw) == LOW) {
-              btnum = 0;
-              while (digitalRead(sw) == LOW) { delay(1); }
-            }
-          }
-          break;
-        case 4:  //start
-          break;
-        case 5:  //stop
-          break;
-        case 6:  //next menu
-          if (digitalRead(sw) == LOW) {
-            delay(20);
-            if (digitalRead(sw) == LOW) {
-              while (digitalRead(sw) == LOW) { delay(1); }
-              page = 3;
-              slc = 0;
-              topage(page);
-              btnum = 0;
-              encoder.setPosition(0);
-            }
-          }
-          break;
-      }
-      break;
-    case 3:  //set
-      if (setflag) {
-        switch (btnum) {
-          case 0:  //dimmer
-
-            ROTARYMAX = 255;
-            if (oldpos != pos) {
-              oldpos = pos;
-              setnum(0, pos);
-            }
-            break;
-          case 1:  //mute
-            ROTARYMAX = 1;
-            if (oldpos != pos) {
-              oldpos = pos;
-              mute = (pos == 0);
-              if (mute) {
-                setqpicc(2, 5);
+            timergo = true;
+            setqpicc(6, 2);
+            setqpicc(5, 3);
+            if (timeup) {
+              if (timermm == 0 && timerss == 0) {
+                timermod = 1;
               } else {
-                setqpicc(2, 7);
+                timermod = 2;
               }
+              oldtimermm = timermm;
+              oldtimerss = timerss;
+              timeup = false;
             }
-            break;
-        }
-
-        if (digitalRead(sw) == LOW) {
-          delay(20);
-          if (digitalRead(sw) == LOW) {
-            setflag = false;
-            while (digitalRead(sw) == LOW) { delay(1); }
-
-            if (btnum == 0) {
-              display.print("n0.pco=65535");  //white
-              end_screen();
-              setqpicc(0, 6);
-            } else {
-              setqpicc(1, 6);
-              if (mute) {
-                setqpicc(2, 4);
-              } else {
-                setqpicc(2, 6);
-              }
-            }
-            btnum = slc;
+          } else {
+            timergo = false;
           }
         }
-      } else {
-        btmax = 3;
+      }
+      if (digitalRead(btstop) == LOW) {
+        delay(20);
+        if (digitalRead(btstop) == LOW) {
+          while (digitalRead(btstop) == LOW) { delay(1); }
+          timermm = 0;
+          timerss = 0;
+          timergo = false;
+          timeup = true;
+          setqpicc(6, 3);
+          setqpicc(5, 2);
+          settime(timermm, timerss);
+        }
+      }
+      time3 = millis();
+      if (time3 - time4 > 1000) {
+        time4 = time3;
+        if (timergo) {
+          if (timermod == 2) {
+            timerss--;
+            if (timerss <= -1) {
+              timermm--;
+              timerss = 59;
+            }
+            if (timermm <= -1) {
+              timermm = 0;
+              timerss = 0;
+              timergo = false;
+              timeup = true;
+              setqpicc(6, 3);
+              setqpicc(5, 2);
+              timermm = oldtimermm;
+              timerss = oldtimerss;
+              beetime = time1 + beedelay;
+            }
+          } else {
+            timerss++;
+            if (timerss >= 60) {
+              timermm++;
+              timerss = 0;
+            }
+            if (timermm >= 99) {
+              timermm = 0;
+              timerss = 0;
+              timergo = false;
+              timeup = true;
+              setqpicc(6, 3);
+              setqpicc(5, 2);
+              timermm = oldtimermm;
+              timerss = oldtimerss;
+            }
+          }
+          settime(timermm, timerss);
+        }
+      }
+
+      if (!timergo) {
         if (oldbtnum != btnum) {
           oldbtnum = btnum;
-          switch (btnum) {
-            case 0:  //dimmer
-              setqpicc(0, 6);
-              setqpicc(1, 4);
-              setqpicc(3, 4);
-              break;
-            case 1:  //mute
-              setqpicc(0, 4);
-              setqpicc(1, 6);
-              setqpicc(3, 4);
-              break;
-            case 2:  //next page
-              setqpicc(0, 4);
-              setqpicc(1, 4);
-              setqpicc(3, 6);
-              break;
+          setqpicc(btnum, 3);
+          for (int i = 0; i < 5; i++) {
+            if (i != btnum) {
+              setqpicc(i, 2);
+            }
           }
+          settime(timermm, timerss);
         }
-        switch (btnum) {
-          case 0:  //dimmer
+        if (oldtimergo != timergo) {
+          oldtimergo = timergo;
+          btnum = 0;
+          setqpicc(btnum, 3);
+          for (int i = 0; i < 5; i++) {
+            if (i != btnum) {
+              setqpicc(i, 2);
+            }
+          }
+          settime(timermm, timerss);
+        }
+        slc = btnum;
+        switch (slc) {  //
+          case 0:       //第一位數值
+            ROTARYMAX = 9;
+            if (oldslc != slc) {
+              oldslc = slc;
+              pos = timermm / 10;
+              encoder.setPosition(pos);
+              Serial.print(slc);
+              Serial.print(slc);
+            }
+            if (oldpos != pos) {
+              oldpos = pos;
+              timermm = (pos * 10) + timermm % 10;
+              settime(timermm, timerss);
+            }
             if (digitalRead(sw) == LOW) {
               delay(20);
               if (digitalRead(sw) == LOW) {
+                btnum = 1;
+                pos = timermm % 10;
                 while (digitalRead(sw) == LOW) { delay(1); }
-                setqpicc(0, 4);
-                setflag = true;
-                slc = btnum;
-                oldpos = -1;
-                display.print("n0.pco=63845");  //red
-                //display.print("n0.pco=65535");//white
-                end_screen();
+              }
+            }
+
+            break;
+          case 1:  //第二位數值
+            ROTARYMAX = 9;
+            if (oldslc != slc) {
+              oldslc = slc;
+              pos = timermm % 10;
+              encoder.setPosition(pos);
+              oldpos = -1;
+              Serial.print(slc);
+              Serial.print(slc);
+            }
+            if (oldpos != pos) {
+              oldpos = pos;
+              timermm = (timermm / 10) * 10 + pos;
+              settime(timermm, timerss);
+            }
+            if (digitalRead(sw) == LOW) {
+              delay(20);
+              if (digitalRead(sw) == LOW) {
+                btnum = 2;
+                while (digitalRead(sw) == LOW) { delay(1); }
               }
             }
             break;
-          case 1:  //mute
+          case 2:  //第三位數值
+            ROTARYMAX = 5;
+            if (oldslc != slc) {
+              oldslc = slc;
+              pos = timerss / 10;
+              encoder.setPosition(pos);
+              oldpos = -1;
+              Serial.print(slc);
+              Serial.print(slc);
+            }
+            if (oldpos != pos) {
+              oldpos = pos;
+              timerss = (pos * 10) + timerss % 10;
+              settime(timermm, timerss);
+            }
             if (digitalRead(sw) == LOW) {
               delay(20);
               if (digitalRead(sw) == LOW) {
+                btnum = 3;
                 while (digitalRead(sw) == LOW) { delay(1); }
-                setqpicc(1, 4);
-                setflag = true;
-                slc = btnum;
-                oldpos = -1;
-                if (mute) {
-                  pos = 0;
-                } else {
-                  pos = 1;
-                }
               }
             }
             break;
-          case 2:  //back
+          case 3:  //第四位數值
+            ROTARYMAX = 9;
+            if (oldslc != slc) {
+              oldslc = slc;
+              pos = timerss % 10;
+              encoder.setPosition(pos);
+              oldpos = -1;
+              Serial.print(slc);
+              Serial.print(slc);
+            }
+            if (oldpos != pos) {
+              oldpos = pos;
+              timerss = (timerss / 10) * 10 + pos;
+              settime(timermm, timerss);
+            }
             if (digitalRead(sw) == LOW) {
               delay(20);
               if (digitalRead(sw) == LOW) {
-                page = 1;
+                btnum = 0;
                 while (digitalRead(sw) == LOW) { delay(1); }
+              }
+            }
+            break;
+          case 4:
+            if (digitalRead(sw) == LOW) {
+              delay(20);
+              if (digitalRead(sw) == LOW) {
+                while (digitalRead(sw) == LOW) { delay(1); }
+                page = 3;
+                slc = 0;
                 topage(page);
                 btnum = 0;
                 encoder.setPosition(0);
@@ -309,6 +313,119 @@ void loop() {
             }
             break;
         }
+
+      } else {
+        slc = 0;
+        if (oldtimergo != timergo) {
+          oldtimergo = timergo;
+          for (int i = 0; i < 5; i++) {
+            setqpicc(i, 2);
+          }
+          settime(timermm, timerss);
+        }
+      }
+
+      break;
+    case 3:  //set
+
+      btmax = 2;
+      if (oldbtnum != btnum) {
+        oldbtnum = btnum;
+        switch (btnum) {
+          case 0:
+            setqpicc(0, 6);
+            setqpicc(1, 4);
+            setqpicc(3, 4);
+            encoder.setPosition(dimmer);
+            break;
+          case 1:
+            setqpicc(0, 4);
+            setqpicc(1, 6);
+            setqpicc(3, 4);
+            if (mute) {
+              encoder.setPosition(0);
+            } else {
+              encoder.setPosition(1);
+            }
+            break;
+          case 2:
+            setqpicc(0, 4);
+            setqpicc(1, 4);
+            setqpicc(3, 6);
+            break;
+        }
+      }
+      switch (btnum) {
+        case 0:
+
+          DMXSerial.write(1, 88);
+          DMXSerial.write(2, 88);
+          DMXSerial.write(3, 255);
+          DMXSerial.write(4, dimmer);
+          ROTARYMAX = 255;
+          if (oldpos != pos) {
+            oldpos = pos;
+            dimmer = pos;
+            setnum(0, dimmer);
+          }
+          if (digitalRead(sw) == LOW) {
+            delay(20);
+            if (digitalRead(sw) == LOW) {
+              while (digitalRead(sw) == LOW) { delay(1); }
+              topage(4);  //save
+              delay(2000);
+              topage(3);
+              oldbtnum = -1;
+              setnum(0, dimmer);
+            }
+          }
+          break;
+        case 1:
+          DMXSerial.write(1, 200);
+          DMXSerial.write(2, 200);
+          DMXSerial.write(3, 0);
+          ROTARYMAX = 1;
+          if (oldpos != pos) {
+            oldpos = pos;
+            mute = (pos == 0);
+            if (mute) {
+              setqpicc(2, 6);
+            } else {
+              setqpicc(2, 4);
+            }
+          }
+          if (digitalRead(sw) == LOW) {
+            delay(20);
+            if (digitalRead(sw) == LOW) {
+              while (digitalRead(sw) == LOW) { delay(1); }
+              topage(4);  //save
+              delay(2000);
+              topage(3);
+              oldbtnum = -1;
+              if (mute) {
+                setqpicc(2, 6);
+              } else {
+                setqpicc(2, 4);
+              }
+            }
+          }
+          break;
+        case 2:
+          DMXSerial.write(1, 200);
+          DMXSerial.write(2, 200);
+          DMXSerial.write(3, 0);
+          if (digitalRead(sw) == LOW) {
+            delay(20);
+            if (digitalRead(sw) == LOW) {
+              while (digitalRead(sw) == LOW) { delay(1); }
+              page = 1;
+              slc = 0;
+              topage(page);
+              btnum = 0;
+              encoder.setPosition(0);
+            }
+          }
+          break;
       }
       break;
   }
@@ -345,6 +462,8 @@ void settime(int hh, int mm) {
   } else {
     m = String(mm);
   }
+  DMXSerial.write(1, hh);
+  DMXSerial.write(2, mm);
   display.print("t0.txt=\"" + h + ":" + m + "\"");
   end_screen();
 }
