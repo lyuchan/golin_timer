@@ -1,17 +1,44 @@
-<!DOCTYPE html>
 <html>
 
 <head>
-    <meta charset="UTF-8" />
-    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'" />
-    <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'" />
-    <title>Hello from Electron renderer!</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="./index.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <title>Timer Control</title>
 </head>
 
 <body>
-    <h1>Hello from Electron renderer!</h1>
-    <p>👋</p>
+    <p>time:</p>
+    <div id="timer">
+        00:00
+    </div>
+
+    <div>
+        <button onclick='start();'>start</button>
+        <button onclick='stop();'>stop</button>
+    </div>
+    <div>
+        <button onclick='addtime(1);'>add 1sec</button>
+        <button onclick='addtime(5);'>add 5sec</button>
+        <button onclick='addtime(10);'>add 10sec</button>
+        <button onclick='addtime(30);'>add 30sec</button>
+        <button onclick='addtime(60);'>add 1min</button>
+        <button onclick='addtime(300);'>add 5min</button>
+        <button onclick='addtime(600);'>add 10min</button>
+        <button onclick='addtime(1800);'>add 30min</button>
+    </div>
+    <div>
+        <button onclick='subtime(1);'>sub 1sec</button>
+        <button onclick='subtime(5);'>sub 5sec</button>
+        <button onclick='subtime(10);'>sub 10sec</button>
+        <button onclick='subtime(30);'>sub 30sec</button>
+        <button onclick='subtime(60);'>sub 1min</button>
+        <button onclick='subtime(300);'>sub 5min</button>
+        <button onclick='subtime(600);'>sub 10min</button>
+        <button onclick='subtime(1800);'>sub 30min</button>
+    </div>
 </body>
 
 </html>
