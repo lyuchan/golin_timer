@@ -1,3 +1,6 @@
+const { SerialPort } = require('serialport')
+const serialport = new SerialPort({ path: 'COM15', baudRate: 9600 })
+
 const express = require('express');
 const app = express();
 const port = 80;
@@ -15,7 +18,9 @@ const server = app.listen(port, () => {
 });
 const SocketServer = require("ws").Server;
 const wss = new SocketServer({ server });
-
+serialport.on('data', function (data) {
+    console.log('Received data:', data.toString());
+});
 wss.on("connection", (ws) => {
 
     ws.on("message", (event) => {
@@ -130,4 +135,6 @@ function senderror(data) {
 }
 function sendtime(sec) {
     send(JSON.stringify({ get: "updatetime", data: sec }))
+    serialport.write('{get:1,data:' + sec + '}\r\n')
+    console.log(sec)
 }
