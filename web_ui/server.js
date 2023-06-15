@@ -1,5 +1,6 @@
+const portPath ='COM15'
 const { SerialPort } = require('serialport')
-const serialport = new SerialPort({ path: 'COM15', baudRate: 9600 })
+const serialport = new SerialPort({ path: portPath, baudRate: 9600 })
 
 const express = require('express');
 const app = express();
@@ -22,7 +23,7 @@ serialport.on('data', function (data) {
     console.log('Received data:', data.toString());
 });
 wss.on("connection", (ws) => {
-
+    ws.send(JSON.stringify({ get: "updatetime", data: timerval }));
     ws.on("message", (event) => {
         let res = JSON.parse(event.toString());
         if (res.get == "add") {

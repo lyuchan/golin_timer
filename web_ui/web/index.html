@@ -39,6 +39,74 @@
         <button onclick='subtime(600);'>sub 10min</button>
         <button onclick='subtime(1800);'>sub 30min</button>
     </div>
+    <script>
+        function keyFunction() {
+            // alert("Key code = " + event.keyCode);
+            let charcode = String.fromCharCode(event.keyCode);
+            if (event.keyCode == 32) {
+                start();
+            } else if (event.keyCode == 27) {
+                stop();
+            }
+
+            switch (charcode) {
+                case "Q":
+                    addtime(1);
+                    break;
+                case "W":
+                    addtime(5);
+                    break;
+                case "E":
+                    addtime(10);
+                    break;
+                case "R":
+                    addtime(30);
+                    break;
+                case "T":
+                    addtime(60);
+                    break;
+                case "Y":
+                    addtime(300);
+                    break;
+                case "U":
+                    addtime(600);
+                    break;
+                case "I":
+                    addtime(1800);
+                    break;
+                case "A":
+                    subtime(1);
+                    break;
+                case "S":
+                    subtime(5);
+                    break;
+                case "D":
+                    subtime(10);
+                    break;
+                case "F":
+                    subtime(30);
+                    break;
+                case "G":
+                    subtime(60);
+                    break;
+                case "H":
+                    subtime(300);
+                    break;
+                case "J":
+                    subtime(600);
+                    break;
+                case "K":
+                    subtime(1800);
+                    break;
+
+                default:
+                    break;
+            }
+        }
+        document.onkeydown = keyFunction;
+    </script>
+    <p>按下空白鍵開始計時</p>
+    <p>按下esc停止計時</p>
 </body>
 
 </html>
